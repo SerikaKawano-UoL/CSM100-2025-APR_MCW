@@ -1,0 +1,15 @@
+Test resources/test1.sml: FAILED
+  - Instruction implemented: add
+  - Missing instruction: lin
+  - Missing instruction: mul
+  - Missing instruction: out
+  - Missing instruction: bnz
+Test resources/test2.sml: FAILED
+  - Missing instruction: lin
+  - Missing instruction: mul
+  - Missing instruction: sub
+  - Missing instruction: out
+  - Missing instruction: bnz
+
+Passed: 0 / 100 points
+Grade: 0%
