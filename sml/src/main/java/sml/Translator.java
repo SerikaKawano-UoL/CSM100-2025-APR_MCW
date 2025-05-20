@@ -2,36 +2,31 @@ package sml;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 import lombok.extern.java.Log;
-import sml.instructions.AddInstruction;
-import sml.instructions.SubInstruction;
-import sml.instructions.MulInstruction;
-import sml.instructions.DivInstruction;
-import sml.instructions.LinInstruction;
-import sml.instructions.OutInstruction;
-import sml.instructions.BnzInstruction;
 
 /**
- * SMLプログラムを読み込み、ラベル一覧（Labels）と命令一覧（List<Instruction>）に変換するクラス
+ * SML program translator: reads a file, parses labels and instructions,
+ * and (in Part II) constructs each Instruction via reflection.
  */
 @Log
 public final class Translator {
     private static final String PATH = "";
-    private final String fileName;   // 読み込むファイル名
-    private String line = "";        // 現在処理中の行
+    private final String fileName;
+    private String line = "";
 
     public Translator(final String file) {
         this.fileName = PATH + file;
     }
 
     /**
-     * ファイルを読み込んで lab（ラベル）と prog（命令）に変換
-     * @return IOエラーなければ true
+     * Read the SML program from file into lab (labels) and prog (instructions).
      */
     public boolean readAndTranslate(final Labels lab, final List<Instruction> prog) {
         try (var sc = new Scanner(new File(fileName), StandardCharsets.UTF_8)) {
@@ -42,6 +37,7 @@ public final class Translator {
             } catch (NoSuchElementException e) {
                 return false;
             }
+
             while (line != null) {
                 String label = scan();
                 if (!label.isEmpty()) {
@@ -65,61 +61,79 @@ public final class Translator {
     }
 
     /**
-     * ラベルと残りの行から命令をパースし、対応する Instruction インスタンスを返す
+     * Parse a single instruction line (after removing label) and return the instance.
+     * Uses reflection to avoid hard-coded switch.
      */
     public Instruction getInstruction(final String label) {
-        if (line.isBlank()) {
+        line = line.trim();
+        if (line.isEmpty()) {
             return null;
         }
         String opCode = scan();
-        int r, s1, s2;
-        switch (opCode) {
-            case "add" -> {
-                r  = scanInt();
-                s1 = scanInt();
-                s2 = scanInt();
-                return new AddInstruction(label, r, s1, s2);
-            }
-            case "sub" -> {
-                r  = scanInt();
-                s1 = scanInt();
-                s2 = scanInt();
-                return new SubInstruction(label, r, s1, s2);
-            }
-            case "mul" -> {
-                r  = scanInt();
-                s1 = scanInt();
-                s2 = scanInt();
-                return new MulInstruction(label, r, s1, s2);
-            }
-            case "div" -> {
-                r  = scanInt();
-                s1 = scanInt();
-                s2 = scanInt();
-                return new DivInstruction(label, r, s1, s2);
-            }
-            case "lin" -> {
-                r = scanInt();
-                int value = scanInt();
-                return new LinInstruction(label, r, value);
-            }
-            case "out" -> {
-                s1 = scanInt();
-                return new OutInstruction(label, s1);
-            }
-            case "bnz" -> {
-                s1 = scanInt();
-                String target = scan();
-                return new BnzInstruction(label, s1, target);
-            }
-            default -> {
-                System.err.println("Unknown instruction: " + opCode);
-                return null;
-            }
+        return returnInstruction(label, opCode);
+    }
+
+    /** Build an Instruction via reflection based on opCode and remaining tokens. */
+    private Instruction returnInstruction(final String label, final String opCode) {
+        String pkg = "sml.instructions";
+        String className = opCode.substring(0, 1).toUpperCase() + opCode.substring(1) + "Instruction";
+        String fqcn = pkg + "." + className;
+        Class<?> clazz;
+        try {
+            clazz = Class.forName(fqcn);
+        } catch (ClassNotFoundException e) {
+            System.err.println("Unknown instruction: " + opCode);
+            return null;
+        }
+        Constructor<?> cons = findConstructor(clazz);
+        if (cons == null) {
+            log.severe("No suitable constructor found for " + fqcn);
+            return null;
+        }
+        Object[] args = argsForConstructor(cons, label);
+        try {
+            return (Instruction) cons.newInstance(args);
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            log.severe("Failed to instantiate " + fqcn + ": " + e);
+            return null;
         }
     }
 
-    /** line から次の空白区切り単語を取り出す */
+    /** Find the constructor whose first parameter is String (the label). */
+    private Constructor<?> findConstructor(Class<?> cl) {
+        for (Constructor<?> c : cl.getConstructors()) {
+            Class<?>[] pts = c.getParameterTypes();
+            if (pts.length > 0 && pts[0] == String.class) {
+                return c;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Build argument array by scanning the remaining tokens:
+     * - first argument is the label String
+     * - for each int parameter: call scanInt()
+     * - for each String parameter: call scan()
+     */
+    private Object[] argsForConstructor(Constructor<?> cons, String label) {
+        Class<?>[] pts = cons.getParameterTypes();
+        Object[] args = new Object[pts.length];
+        args[0] = label;
+        for (int i = 1; i < pts.length; i++) {
+            if (pts[i] == int.class) {
+                args[i] = scanInt();
+            } else if (pts[i] == String.class) {
+                args[i] = scan();
+            } else {
+                // unsupported parameter type
+                args[i] = null;
+            }
+        }
+        return args;
+    }
+
+    /** Trim leading whitespace, extract next word, and remove it from line. */
     private String scan() {
         line = line.trim();
         if (line.isEmpty()) {
@@ -134,7 +148,7 @@ public final class Translator {
         return word;
     }
 
-    /** scan()した単語を int に変換。失敗時は Integer.MAX_VALUE を返す */
+    /** Scan next word as integer, return Integer.MAX_VALUE on parse error. */
     private int scanInt() {
         String w = scan();
         try {
@@ -143,12 +157,4 @@ public final class Translator {
             return Integer.MAX_VALUE;
         }
     }
-
-    // Part II（リフレクション化フェーズ）用のメソッド。現状未使用です。
-    @SuppressWarnings("unused")
-    private Instruction returnInstruction(final String label, String opCode) { /* … */ return null; }
-    @SuppressWarnings("unused")
-    private java.lang.reflect.Constructor<?> findConstructor(Class<?> cl)    { /* … */ return null; }
-    @SuppressWarnings("unused")
-    private Object[] argsForConstructor(java.lang.reflect.Constructor<?> c, String label) { /* … */ return null; }
 }
