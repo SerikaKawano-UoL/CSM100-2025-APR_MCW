@@ -2,186 +2,153 @@ package sml;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 import lombok.extern.java.Log;
-
 import sml.instructions.AddInstruction;
+import sml.instructions.SubInstruction;
+import sml.instructions.MulInstruction;
+import sml.instructions.DivInstruction;
+import sml.instructions.LinInstruction;
+import sml.instructions.OutInstruction;
+import sml.instructions.BnzInstruction;
 
 /**
- * This class is the main translation mechanism.
- * <p>
- * The translator of a <b>S</b><b>M</b>al<b>L</b> program.
- *
- * @author KLM and xxx
+ * SMLプログラムを読み込み、ラベル一覧（Labels）と命令一覧（List<Instruction>）に変換するクラス
  */
- @Log
+@Log
 public final class Translator {
-
     private static final String PATH = "";
-
-    // word + line is the part of the current line that's not yet processed
-    // word has no whitespace
-    // If word and line are not empty, line begins with whitespace
-    private final String fileName; // source file of SML code
-    private String line = "";
+    private final String fileName;   // 読み込むファイル名
+    private String line = "";        // 現在処理中の行
 
     public Translator(final String file) {
-        fileName = PATH + file;
+        this.fileName = PATH + file;
     }
 
-    // translate the small program in the file into lab (the labels) and
-    // prog (the program)
-    // return "no errors were detected"
-
+    /**
+     * ファイルを読み込んで lab（ラベル）と prog（命令）に変換
+     * @return IOエラーなければ true
+     */
     public boolean readAndTranslate(final Labels lab, final List<Instruction> prog) {
         try (var sc = new Scanner(new File(fileName), StandardCharsets.UTF_8)) {
-            // Scanner attached to the file chosen by the user
-            // The labels of the program being translated
             lab.reset();
-            // The program to be created
             prog.clear();
-
             try {
                 line = sc.nextLine();
-            } catch (NoSuchElementException ioE) {
+            } catch (NoSuchElementException e) {
                 return false;
             }
-
-            // Each iteration processes line and reads the next input
-            // line into "line"
             while (line != null) {
-                // Store the label in label
-                var label = scan();
-
-                if (label.length() > 0) {
-                    var ins = getInstruction(label);
+                String label = scan();
+                if (!label.isEmpty()) {
+                    Instruction ins = getInstruction(label);
                     if (ins != null) {
                         lab.addLabel(label);
                         prog.add(ins);
                     }
                 }
-
                 try {
                     line = sc.nextLine();
-                } catch (NoSuchElementException ioE) {
+                } catch (NoSuchElementException e) {
                     return false;
                 }
             }
-        } catch (IOException ioE) {
-            System.err.println("File: IO error " + ioE);
+        } catch (IOException e) {
+            System.err.println("File: IO error " + e);
             return false;
         }
         return true;
     }
 
-    // The input line should consist of an SML instruction, with its label already removed.
-    // Translate line into an instruction with label "label" and return the instruction.
+    /**
+     * ラベルと残りの行から命令をパースし、対応する Instruction インスタンスを返す
+     */
     public Instruction getInstruction(final String label) {
-        int s1; // Possible operands of the instruction
-        int s2;
-        int r;
-
-        if (line.equals("")) {
+        if (line.isBlank()) {
             return null;
         }
-        var opCode = scan();
-
+        String opCode = scan();
+        int r, s1, s2;
         switch (opCode) {
             case "add" -> {
-                r = scanInt();
+                r  = scanInt();
                 s1 = scanInt();
                 s2 = scanInt();
                 return new AddInstruction(label, r, s1, s2);
             }
-
-            // TODO: You have to write code here for the other instructions.
-
-            default -> System.out.println("Unknown instruction: " + opCode);
+            case "sub" -> {
+                r  = scanInt();
+                s1 = scanInt();
+                s2 = scanInt();
+                return new SubInstruction(label, r, s1, s2);
+            }
+            case "mul" -> {
+                r  = scanInt();
+                s1 = scanInt();
+                s2 = scanInt();
+                return new MulInstruction(label, r, s1, s2);
+            }
+            case "div" -> {
+                r  = scanInt();
+                s1 = scanInt();
+                s2 = scanInt();
+                return new DivInstruction(label, r, s1, s2);
+            }
+            case "lin" -> {
+                r = scanInt();
+                int value = scanInt();
+                return new LinInstruction(label, r, value);
+            }
+            case "out" -> {
+                s1 = scanInt();
+                return new OutInstruction(label, s1);
+            }
+            case "bnz" -> {
+                s1 = scanInt();
+                String target = scan();
+                return new BnzInstruction(label, s1, target);
+            }
+            default -> {
+                System.err.println("Unknown instruction: " + opCode);
+                return null;
+            }
         }
-        return null; // FIX THIS
-
-        // In the second phase you will replace the switch with...
-        // return returnInstruction(label, opCode);
     }
 
-    /*
-     * Return the first word of line and remove it from line. If there is no word,
-     * return ""
-     */
+    /** line から次の空白区切り単語を取り出す */
     private String scan() {
         line = line.trim();
-        if (line.length() == 0) {
+        if (line.isEmpty()) {
             return "";
         }
-
         int i = 0;
-        while (i < line.length() && line.charAt(i) != ' ' && line.charAt(i) != '\t') {
-            i = i + 1;
+        while (i < line.length() && !Character.isWhitespace(line.charAt(i))) {
+            i++;
         }
         String word = line.substring(0, i);
         line = line.substring(i);
         return word;
     }
 
-    // Return the first word of line as an integer. 
-    // If there is any error, return the maximum int
+    /** scan()した単語を int に変換。失敗時は Integer.MAX_VALUE を返す */
     private int scanInt() {
-        String word = scan();
-        if (word.length() == 0) {
-            return Integer.MAX_VALUE;
-        }
-
+        String w = scan();
         try {
-            return Integer.parseInt(word);
+            return Integer.parseInt(w);
         } catch (NumberFormatException e) {
             return Integer.MAX_VALUE;
         }
     }
 
-    private Instruction returnInstruction(final String label, String opCode) {
-        String pkg = "sml.instructions"; // hardwired = bad!
-        String base = "Instruction"; // ditto
-
-        // Transform add -> sml.instructions.AddInstruction
-        String fqcn = pkg + "." + opCode.substring(0, 1).toUpperCase(Locale.ROOT) + opCode.substring(1) + base;
-
-        // get the class
-        Class clazz;
-        try {
-            clazz = Class.forName(fqcn);
-        } catch (ClassNotFoundException e) {
-            System.err.println("Unknown instruction: " + fqcn);
-            return null;
-        }
-
-        // find the correct constructor
-        Constructor cons = findConstructor(clazz);
-        var objArray = argsForConstructor(null, label);
-
-        try {
-            return (Instruction) cons.newInstance(objArray); // create an instance with the ctor args
-        } catch (InvocationTargetException | InstantiationException | IllegalAccessException | NullPointerException e) {
-            log.severe(String.format("In %s: issue with creating the instruction", this.getClass()));
-        }
-        return null; // bad!!!
-    }
-
-    private Constructor findConstructor(Class cl) {
-        Constructor cons = null;
-        // TODO
-        return null;
-    }
-
-    private Object[] argsForConstructor(Constructor cons, String label) {
-        Object[] argsArray = null;
-        // TODO
-        return null;
-    }
+    // Part II（リフレクション化フェーズ）用のメソッド。現状未使用です。
+    @SuppressWarnings("unused")
+    private Instruction returnInstruction(final String label, String opCode) { /* … */ return null; }
+    @SuppressWarnings("unused")
+    private java.lang.reflect.Constructor<?> findConstructor(Class<?> cl)    { /* … */ return null; }
+    @SuppressWarnings("unused")
+    private Object[] argsForConstructor(java.lang.reflect.Constructor<?> c, String label) { /* … */ return null; }
 }

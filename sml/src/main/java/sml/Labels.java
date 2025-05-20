@@ -14,7 +14,7 @@ import java.util.stream.IntStream;
  * @author KLM and xxx
  */
 @ToString
-class Labels {
+public class Labels {
 	private final List<String> labels;
 
 	{

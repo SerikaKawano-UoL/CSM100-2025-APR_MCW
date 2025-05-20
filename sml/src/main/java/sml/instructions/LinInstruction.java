@@ -3,6 +3,9 @@ package sml.instructions;
 import sml.Instruction;
 import sml.Machine;
 
+/**
+ * r = x  (定数格納)
+ */
 public class LinInstruction extends Instruction {
     private final int register;
     private final int value;
@@ -20,6 +23,8 @@ public class LinInstruction extends Instruction {
 
     @Override
     public String toString() {
-        return super.toString() + " store the value " + value + " in register " + register;
+        return super.toString()
+            + " store the value " + value
+            + " in register " + register;
     }
 }
