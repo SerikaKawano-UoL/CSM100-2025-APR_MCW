@@ -4,7 +4,7 @@ import sml.Instruction;
 import sml.Machine;
 
 /**
- * r = x  (定数格納)
+ * r = x  (store constant in register)
  */
 public class LinInstruction extends Instruction {
     private final int register;

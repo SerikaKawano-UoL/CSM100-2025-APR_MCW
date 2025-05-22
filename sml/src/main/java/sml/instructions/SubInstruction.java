@@ -4,7 +4,7 @@ import sml.Instruction;
 import sml.Machine;
 
 /**
- * r = s1 – s2
+ * sub r s1 s2  (store in register r the result of subtracting the contents of register s2 from register s1)
  */
 public class SubInstruction extends Instruction {
     private final int result;

@@ -4,7 +4,7 @@ import sml.Instruction;
 import sml.Machine;
 
 /**
- * bnz s1 L  (register s1 != 0 ならラベル L へジャンプ)
+ * bnz s1 L  (if register s1 is not zero, then jump to label L)
  */
 public class BnzInstruction extends Instruction {
     private final int register;
@@ -22,7 +22,7 @@ public class BnzInstruction extends Instruction {
         if (value != 0) {
             int targetIndex = m.labels().indexOf(targetLabel);
             if (targetIndex != -1) {
-                m.pc(targetIndex);  // fluent セッターでプログラムカウンターを設定
+                m.pc(targetIndex);  // set the programme counter via fluent setter
             }
         }
     }

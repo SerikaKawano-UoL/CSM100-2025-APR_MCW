@@ -4,8 +4,8 @@ import sml.Instruction;
 import sml.Machine;
 
 /**
- * Example instruction for the SML machine
-*/
+ * Example instruction for the SML machine.
+ */
 public class AddInstruction extends Instruction {
     private final int result;
     private final int register1;

@@ -4,7 +4,7 @@ import sml.Instruction;
 import sml.Machine;
 
 /**
- * out s1  (register s1 の内容を標準出力)
+ * out s1  (print the contents of register s1 to standard output)
  */
 public class OutInstruction extends Instruction {
     private final int register;

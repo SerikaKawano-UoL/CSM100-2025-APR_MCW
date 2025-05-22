@@ -1,42 +1,44 @@
 package sml;
 
 /**
- * 抽象命令クラス。すべての SML 命令はこのクラスを継承する。
+ * Abstract instruction class. All SML instructions extend this class.
  */
 public abstract class Instruction {
-    /** この命令のラベル */
+    /** The label of this instruction */
     private final String label;
-    /** 命令コード（"add", "sub" など） */
+    /** The opcode (for example, "add", "sub") */
     private final String opcode;
 
     /**
-     * ラベルと命令コードを受け取るコンストラクタ
-     * @param label この命令のラベル
-     * @param opcode 命令コード
+     * Constructor accepting a label and an opcode.
+     *
+     * @param label  the label of this instruction
+     * @param opcode the opcode of this instruction
      */
     public Instruction(String label, String opcode) {
         this.label = label;
         this.opcode = opcode;
     }
 
-    /** ラベルを返す */
+    /** Returns the label of this instruction */
     public String getLabel() {
         return label;
     }
 
-    /** 命令コードを返す */
+    /** Returns the opcode of this instruction */
     public String getOpcode() {
         return opcode;
     }
 
     /**
-     * 命令の実行ロジック。各サブクラスで実装すること。
-     * @param m 実行中のマシン
+     * Executes the instruction's logic; must be implemented by each subclass.
+     *
+     * @param m the machine on which this instruction runs
      */
     public abstract void execute(Machine m);
 
     /**
-     * デバッグ用に「label: opcode」の形式で返す。
+     * Returns a debug representation in the form "label: opcode".
      */
     @Override
     public String toString() {

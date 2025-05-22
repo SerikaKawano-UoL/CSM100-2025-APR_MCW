@@ -4,7 +4,7 @@ import sml.Instruction;
 import sml.Machine;
 
 /**
- * r = s1 * s2
+ * r = s1 * s2  (multiply the contents of register s1 by register s2)
  */
 public class MulInstruction extends Instruction {
     private final int result;

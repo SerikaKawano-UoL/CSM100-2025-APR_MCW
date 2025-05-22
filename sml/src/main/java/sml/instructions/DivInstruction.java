@@ -4,7 +4,7 @@ import sml.Instruction;
 import sml.Machine;
 
 /**
- * r = s1 / s2  (整数除算)
+ * r = s1 / s2  (integer division)
  */
 public class DivInstruction extends Instruction {
     private final int result;
